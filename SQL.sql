@@ -51,3 +51,4 @@ SELECT title, author, amount,
 FROM book
 WHERE ((SELECT MAX(amount)
      FROM book) - amount) > 0;
+
