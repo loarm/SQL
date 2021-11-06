@@ -37,6 +37,7 @@ GROUP BY author
 HAVING SUM(price * amount) >= 5000
 ORDER BY ROUND(SUM(price * amount), 2) DESC;
 
+
 /* Задание
 Посчитать сколько и каких экземпляров книг нужно заказать поставщикам, 
 чтобы на складе стало одинаковое количество экземпляров каждой книги, 
@@ -122,3 +123,47 @@ FROM author
     JOIN book USING(author_id)
     JOIN supply ON book.title = supply.title 
 WHERE book.price = supply.price;
+
+
+/* Для книг, которые уже есть на складе (в таблице book), но по другой цене, чем в поставке (supply),  
+необходимо в таблице book увеличить количество на значение, указанное в поставке, и пересчитать цену. 
+А в таблице  supply обнулить количество этих книг. */
+
+UPDATE book
+    JOIN author ON book.author_id = author.author_id
+    JOIN supply ON book.title = supply.title and supply.author = author.name_author
+SET book.amount = book.amount + supply.amount,
+    book.price = (((book.price * book.amount) + (supply.price * supply.amount)) / (supply.amount + book.amount)),
+    supply.amount = 0
+WHERE book.price != supply.price;
+
+
+/* Включить новых авторов в таблицу author с помощью запроса на добавление, а затем вывести все данные из таблицы author.  
+Новыми считаются авторы, которые есть в таблице supply, но нет в таблице author.*/
+
+INSERT INTO author(name_author)
+SELECT supply.author
+FROM author
+    RIGHT JOIN supply ON supply.author = author.name_author
+WHERE name_author is NULL;
+
+
+/* Добавить новые книги из таблицы supply в таблицу book на основе сформированного выше запроса. 
+Затем вывести для просмотра таблицу book.*/
+
+INSERT INTO book(title, author_id, price, amount)
+SELECT title, author_id, price, amount 
+FROM author
+    JOIN supply ON supply.author = author.name_author
+WHERE amount <> 0;
+
+
+/* Удалить всех авторов и все их книги, общее количество книг которых меньше 20. */
+
+DELETE FROM author
+WHERE author_id IN(
+    SELECT author_id
+    FROM book
+    GROUP BY author_id
+    HAVING SUM(amount) < 20
+    );
